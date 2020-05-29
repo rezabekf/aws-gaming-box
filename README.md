@@ -1,5 +1,7 @@
 # AWS G4 Gaming Box
 
+> Under development, install at your own risk!
+
 ## Pre-req
 1. Install `AWS CLI`
 1. Install `pip`
