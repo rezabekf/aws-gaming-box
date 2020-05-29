@@ -1,0 +1,8 @@
+/.env
+/.vscode/
+/.idea/
+/start_server.sh
+snapshotter/
+!snapshotter/app.py
+!snapshotter/requirements.txt
+/gaming-box-packaged.template
