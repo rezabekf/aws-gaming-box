@@ -69,3 +69,18 @@ Powershell.exe -File $ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool\Pa
 1. Follow installation instructions from Parsec Team blog post [RTX Cloud Gaming With The New AWS G4 Instances](https://blog.parsecgaming.com/rtx-cloud-gaming-with-the-new-aws-g4-instances-11d1c60c2d09)
 
 ## What will happen when you are done gaming?
+[TODO]
+- Architecture diagram
+- Description how lambda will create snapshot and AMI
+
+## Gaming box start up script
+
+    $ start-gaming-box -r eu-west-2 -l lt-0xxxxxxx -v 1 -i g4dn.4xlarge
+    
+    start_server.sh [OPTION]
+    -r; AWS Region (default: eu-west-1)
+    -l; Set Launch Template ID (required)
+    -v; Launch template version (default: 1)
+    -i; Instance Type (default: gdn.4xlarge)
+    -h; Help
+    
