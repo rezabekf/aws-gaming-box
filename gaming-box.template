@@ -31,29 +31,47 @@ Parameters:
 
 Mappings:
   AMIRegionMap:
-    us-east-1:
-      NICEDCV: ami-035a352d4d53371dc
+    eu-north-1:
+      NICEDCV: ami-0229c06b2e8dde196
 
-    us-east-2:
-      NICEDCV: ami-0e513ab3dde457471
+    ap-south-1:
+      NICEDCV: ami-00c63aed4bb7051c1
 
-    us-west-2:
-      NICEDCV: ami-08ec961045e722c40
-
-    ap-northeast-1:
-      NICEDCV: ami-0a9fb743d72e209ca
-
-    ap-southeast-1:
-      NICEDCV: ami-0e14ff207c0bd2e5d
-
-    eu-central-1:
-      NICEDCV: ami-0da51c48c5e5f8e0e
-
-    eu-west-1:
-      NICEDCV: ami-0edc64da5375c6c34
+    eu-west-3:
+      NICEDCV: ami-08db56d7906c756f7
 
     eu-west-2:
-      NICEDCV: ami-027221529e78599f9
+      NICEDCV: ami-06052cc19d17248a5
+
+    eu-west-1:
+      NICEDCV: ami-0e53bea781f755cb9
+
+    ap-northeast-2:
+      NICEDCV: ami-0e6d692f39c0093a8
+
+    ap-northeast-1:
+      NICEDCV: ami-00fab56ff4b6a09a3
+
+    ap-southeast-1:
+      NICEDCV: ami-0b2b15806a49b8cbc
+
+    ap-southeast-2:
+      NICEDCV: ami-01557b04f1df6a3cb
+
+    eu-central-1:
+      NICEDCV: ami-02b7125842f81a87f
+
+    us-east-1:
+      NICEDCV: ami-04778e52247887e77
+
+    us-east-2:
+      NICEDCV: ami-08e4ec8ee36382d64
+
+    us-west-1:
+      NICEDCV: ami-0283d57a447aca855
+
+    us-west-2:
+      NICEDCV: ami-0243655613bd4e173
 
 Resources:
   # --> GamingBox Configuration <-- #
