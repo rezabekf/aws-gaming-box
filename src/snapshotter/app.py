@@ -1,6 +1,6 @@
 import os
-import boto3
 
+import boto3
 from botocore import exceptions
 
 gaming_instance_name = os.environ['GAMING_INSTANCE_NAME']

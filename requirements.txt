@@ -1,0 +1,5 @@
+awscli
+boto3
+boto3-stubs
+bump2version
+pre-commit
