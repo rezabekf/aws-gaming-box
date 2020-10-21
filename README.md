@@ -1,7 +1,5 @@
 # AWS G4 Gaming Box
 
-> Under development, install at your own risk!
-
 This project will deploy G4 EC2 windows instance. The instance is running [NICEDCV server](https://docs.aws.amazon.com/dcv/latest/userguide/getting-started.html) and is bootstrapped with following applications and drivers:
 * NVIDIA gaming drivers for G4 instances
 * Steam app
@@ -18,13 +16,13 @@ The following dependencies must be installed:
 - virtualenv ([Local Development only](#local-development))
 
 ## Deploy the CloudFormation Stack
-As the solution is using `Lambda` function, the code needs to be zipped and uploaded to S3 bucket. The `deploy.sh` script will install lambda libraries, will package the template to S3 bucket and finally will deploy the CloudFormation stack.
+As the solution is using `Lambda` function, the code needs to be zipped and uploaded to S3 bucket. The `Makefile` will install lambda libraries, package the template to S3 bucket and finally deploy the CloudFormation stack.
 
 1. Set the env variables
     ```shell script
     BUCKET_NAME=""
     AWS_REGION=""
-    KEY_PAIR=""
+    KEY_PAIR_NAME=""
     ```
 1. Create S3 bucket
     ```shell script
@@ -33,11 +31,11 @@ As the solution is using `Lambda` function, the code needs to be zipped and uplo
 1. Create Amazon EC2 key pair
     Specify the location where to store pem file after `>`
     ```shell script
-    aws ec2 create-key-pair --key-name ${KEY_PAIR} --query 'KeyMaterial' --output text > ~/Downloads/${KEY_PAIR}.pem --region ${AWS_REGION}
+    aws ec2 create-key-pair --key-name ${KEY_PAIR_NAME} --query 'KeyMaterial' --output text > ~/Downloads/${KEY_PAIR_NAME}.pem --region ${AWS_REGION}
     ```
 1. Set the permission of the `.pem` file to read only
     ```shell script
-    chmod 400 ~/Downloads/MyKeyPair.pem
+    chmod 400 ~/Downloads/${KEY_PAIR_NAME}.pem
     ```
 1. Create a `.custom.mk` file and populate it with your own values
    ```
