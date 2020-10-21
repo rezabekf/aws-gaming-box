@@ -2,51 +2,61 @@
 
 > Under development, install at your own risk!
 
-## Pre-req
-1. Install `AWS CLI`
-1. Install `pip`
+This project will deploy G4 EC2 windows instance. The instance is running [NICEDCV server](https://docs.aws.amazon.com/dcv/latest/userguide/getting-started.html) and is bootstrapped with following applications and drivers:
+* NVIDIA gaming drivers for G4 instances
+* Steam app
+* Parsec app
+* Google Chrome
+* 7Zip
+* AWSCLI
+
+## Pre-Requisites
+
+The following dependencies must be installed:
+- awscli
+- Python >=3.8 and pip ([Local Development only](#local-development))
+- virtualenv ([Local Development only](#local-development))
 
 ## Deploy the CloudFormation Stack
-As the solution is using `Lambda` function, the code needs to be zipped and uploaded to S3 bucket. The `deploy.sh` script will install lambda libraries, will package the template to S3 bucket and finaly will deploy the CloudFormation stack.
+As the solution is using `Lambda` function, the code needs to be zipped and uploaded to S3 bucket. The `deploy.sh` script will install lambda libraries, will package the template to S3 bucket and finally will deploy the CloudFormation stack.
 
-1. Create Amazon S3 bucket
-   ```
-   $ BUCKET_NAME=""
-   $ AWS_REGION=""
-   $ aws s3 mb s3://${BUCKET_NAME} --region $AWS_REGION
-   ```
+1. Set the env variables
+    ```shell script
+    BUCKET_NAME=""
+    AWS_REGION=""
+    KEY_PAIR=""
+    ```
+1. Create S3 bucket
+    ```shell script
+    aws s3 mb s3://${BUCKET_NAME} --region ${AWS_REGION}
+    ```
 1. Create Amazon EC2 key pair
-   Replace the `--key-name` with your own key name and specify the location after `>`
-   ```
-   aws ec2 create-key-pair --key-name MyKeyPair --query 'KeyMaterial' --output text > ~/Downloads/MyKeyPair.pem --region $AWS_REGION
-   ```
+    Specify the location where to store pem file after `>`
+    ```shell script
+    aws ec2 create-key-pair --key-name ${KEY_PAIR} --query 'KeyMaterial' --output text > ~/Downloads/${KEY_PAIR}.pem --region ${AWS_REGION}
+    ```
 1. Set the permission of the `.pem` file to read only
+    ```shell script
+    chmod 400 ~/Downloads/MyKeyPair.pem
+    ```
+1. Create a `.custom.mk` file and populate it with your own values
    ```
-   chmod 400 ~/Downloads/MyKeyPair.pem
-   ```
-1. Create an `.env` file and populate it with your own values
-
-   ```
-   $ cp .env.example .env
+   cp .custom.mk.example .custom.mk
    ```
 
    |Variable Label|Example|Description|
    |--------------|-------|-----------|
-   |BUCKET_NAME|my-unique-bucket-name|Use the same value from step above|
-   |PREFIX_NAME|gaming-box-infra|This will put all the code in a bucket folder|
-   |STACK_NAME |GamingBox|The name of the stack|
    |AWS_REGION |eu-west-2|The AWS region to deploy the solution to|
+   |BUCKET_NAME|my-unique-bucket-name|Use the same value from step above|
+   |STACK_NAME |GamingBox|The name of the stack|
+   |GAMING_BOX_INSTANCE_TYPE |g4dn.xlarge|The type of the instance from a G4 family|
    |KEY_PAIR   |MyKeyPair|The name of the KeyPair created above|
-   |ON_PREM_IP |0.0.0.0/0|CIDR annotation of your home IP, to increase the security|
+   |ON_PREM_IP |0.0.0.0/0|CIDR annotation of your home IPv4 address|
 
-1. Double check that `deploy.sh` is executable, if not run:
-   ```
-   $ chmod +x deploy.sh
-   ```
-1. Run the deployment script
-   ```
-   $ ./deploy.sh
-   ```
+1. Deploy the stack
+    ```shell script
+    make deploy
+    ```
 1. Go to AWS console and wait for the stack to complete
 1. Navigate to the EC2 console, select the Gaming instance and click on **Connect**
 1. Note down the **Public DNS**, **User name** and **Password** (you may have to wait a few minutes for the password to become available)
@@ -55,31 +65,56 @@ As the solution is using `Lambda` function, the code needs to be zipped and uplo
 1. Get NICE DCV Client from [https://docs.aws.amazon.com/dcv/latest/userguide/client.html](https://docs.aws.amazon.com/dcv/latest/userguide/client.html)
 1. Connect via DCV client, providing login details noted above
 
-## Install Parsec
-1. Open PowerShell and paste command bellow:
-```powershell
-[Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
-(New-Object System.Net.WebClient).DownloadFile("https://github.com/jamesstringerparsec/Parsec-Cloud-Preparation-Tool/archive/master.zip","$ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool.zip")
-New-Item -Path $ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool -ItemType Directory
-Expand-Archive $ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool.Zip -DestinationPath $ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool
-CD $ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool\Parsec-Cloud-Preparation-Tool-master\
-Powershell.exe -File $ENV:UserProfile\Downloads\Parsec-Cloud-Preparation-Tool\Parsec-Cloud-Preparation-Tool-master\Loader.ps1
-
-```
-1. Follow installation instructions from Parsec Team blog post [RTX Cloud Gaming With The New AWS G4 Instances](https://blog.parsecgaming.com/rtx-cloud-gaming-with-the-new-aws-g4-instances-11d1c60c2d09)
-
 ## What will happen when you are done gaming?
 [TODO]
 - Architecture diagram
 - Description how lambda will create snapshot and AMI
 
 ## Gaming box start up script
-
-    $ start-gaming-box -r eu-west-2 -l lt-0xxxxxxx -v 1 -i g4dn.4xlarge
-
+[TODO]
+- start the game box using Launch Configuration and AMI created by lambda function
+    ```shell script
+    start-gaming-box -r eu-west-2 -l lt-0xxxxxxx -v 1 -i g4dn.xlarge
+    ```
+- parameters
+    ```shell script
     start_server.sh [OPTION]
     -r; AWS Region (default: eu-west-1)
     -l; Set Launch Template ID (required)
     -v; Launch template version (default: 1)
     -i; Instance Type (default: gdn.4xlarge)
     -h; Help
+    ```
+
+## Local Development
+This section details how to run the solution locally and deploy your code changes from the command line.
+
+### Initialize env
+1. Install the extra prerequisites for development.
+1. Follow the steps 1. to 5. from [Deploy the CloudFormation Stack](#Deploy-the-CloudFormation-Stack)
+1. Initialize the local environment
+    ```shell script
+    make init
+    ```
+1. Activate `virtualenv` environment.
+    ```shell script
+    source venv/bin/activate
+    ```
+
+### Test changes
+The following command will run `pre-commit` tests. This should be run before every new commit.
+```shell script
+make test
+```
+
+### Clean the virtual environment
+This command will delete the virtual environment and all installed packages install via `make init`
+```shell script
+make clean
+```
+
+### Delete the resources created via CloudFormation
+Below command will delete deployed stack
+```shell script
+make delete
+```
