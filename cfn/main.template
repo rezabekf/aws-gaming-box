@@ -1,6 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: "AWS G4 Gaming Box with NiceDcv and Parsec Clients"
+Description: "AWS G4 Gaming Box NiceDcv server with Parsec"
 Transform: AWS::Serverless-2016-10-31
+Metadata:
+  Version: 0.0.1
 
 Parameters:
   GamingBoxInstanceType:
@@ -13,7 +15,7 @@ Parameters:
       - g4dn.8xlarge
       - g4dn.12xlarge
       - g4dn.16xlarge
-    Default: g4dn.4xlarge
+    Default: g4dn.xlarge
 
   GamingBoxVolumeSize:
     Type: String
@@ -21,13 +23,18 @@ Parameters:
 
   KeyPair:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: KeyPair Name
+    Description: Keypair for the instance
 
   OnPremIp:
     Type: String
     Description: CIDR block of an on-premise IP address
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     Default: 0.0.0.0/0
+
+  ResourceTags:
+    Type: String
+    Description: Tag resources, which can help you identify and categorize them. For example project or application name e.g. MyAwesomeApp.
+    Default: 'GamingBox'
 
 Mappings:
   AMIRegionMap:
@@ -74,7 +81,35 @@ Mappings:
       NICEDCV: ami-0243655613bd4e173
 
 Resources:
-  # --> GamingBox Configuration <-- #
+  # --> Assets Configuration <--#
+  AssetsS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref ResourceTags
+
+  LambdaUploadAssetsToS3:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uploader.handler
+      Runtime: python3.8
+      CodeUri: ../src/uploader/
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref AssetsS3Bucket
+      Tags:
+        Name: !Ref ResourceTags
+
+  LambdaTriggerUploadAssetsToS3:
+    Type: Custom::LambdaTrigger
+    Version: '1.0'
+    Properties:
+      ServiceToken: !GetAtt LambdaUploadAssetsToS3.Arn
+      AssetsS3Bucket: !Ref AssetsS3Bucket
+      Build: 1.0
+
+  # --> GamingBox access configuration <-- #
   GamingBoxInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -97,7 +132,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       Policies:
-        - PolicyName: TagInstancePolicy
+        - PolicyName: tag-instance
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -106,14 +141,30 @@ Resources:
                   - ec2:Describe*
                   - ec2:CreateTags
                 Resource: '*'
-        - PolicyName: NiceDCVLicensePolicy
+        - PolicyName: nice-dcv-license
           PolicyDocument:
             Version: 2012-10-17
             Statement:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                Resource: !Sub arn:aws:s3:::dcv-license.${AWS::Region}/*
+                Resource: !Sub 'arn:aws:s3:::dcv-license.${AWS::Region}/*'
+        - PolicyName: ec2-windows-nvidia-drivers
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${AssetsS3Bucket}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: 'arn:aws:s3:::ec2-windows-nvidia-drivers'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: 'arn:aws:s3:::ec2-windows-nvidia-drivers/*'
 
   GamingBoxSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -130,10 +181,59 @@ Resources:
           CidrIp: !Ref OnPremIp
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}-SG
+          Value: !Ref ResourceTags
 
   GamingBoxLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3AccessCreds:
+          type: S3
+          roleName: !Ref GamingBoxRole
+          buckets:
+            - !Ref AssetsS3Bucket
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            C:\cfn\scripts\install-packages.ps1:
+              source: !Sub 'https://${AssetsS3Bucket}.s3.${AWS::Region}.${AWS::URLSuffix}/install-packages.ps1'
+              authentication: S3AccessCreds
+            C:\cfn\scripts\install-gpu-drivers.ps1:
+              source: !Sub 'https://${AssetsS3Bucket}.s3.${AWS::Region}.${AWS::URLSuffix}/install-gpu-drivers.ps1'
+              authentication: S3AccessCreds
+            C:\cfn\cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+            C:\cfn\hooks.d\cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.GamingBoxLaunchTemplate.Metadata.AWS::CloudFormation::Init
+                action=cfn-init.exe -v --stack ${AWS::StackId} --resource GamingBoxLaunchTemplate --region ${AWS::Region}
+          commands:
+            01-install-packages:
+              command: 'powershell.exe -ExecutionPolicy Unrestricted C:\cfn\scripts\install-packages.ps1 -Verbose'
+              waitAfterCompletion: 0
+            05-install-gpu-drivers:
+              command: 'powershell.exe -ExecutionPolicy Unrestricted C:\cfn\scripts\install-gpu-drivers.ps1 -Verbose'
+              waitAfterCompletion: 0
+          services:
+            windows:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - 'c:\\cfn\\cfn-hup.conf'
+                  - 'c:\\cfn\\hooks.d\\cfn-auto-reloader.conf'
+                audiosrv:
+                  enabled: true
+                  ensureRunning: true
+                amazon-ssm-agent:
+                  enabled: true
+                  ensureRunning: true
     Properties:
       LaunchTemplateData:
         BlockDeviceMappings:
@@ -157,15 +257,21 @@ Resources:
           - ResourceType: instance
             Tags:
               - Key: Name
-                Value: !Sub ${AWS::StackName}
+                Value: !Ref ResourceTags
               - Key: SnapAndDelete
                 Value: 'True'
           - ResourceType: volume
             Tags:
               - Key: Name
-                Value: !Sub ${AWS::StackName}
+                Value: !Ref ResourceTags
               - Key: SnapAndDelete
                 Value: 'True'
+        UserData:
+          Fn::Base64: !Sub |
+            <script>
+            cfn-init.exe -v --stack ${AWS::StackName} --resource GamingBoxLaunchTemplate --region ${AWS::Region}
+            cfn-signal.exe -e %errorlevel% --stack ${AWS::StackName} --resource GamingBoxInstance --region ${AWS::Region}
+            </script>
 
   GamingBoxInstance:
     Type: AWS::EC2::Instance
@@ -173,8 +279,12 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref GamingBoxLaunchTemplate
         Version: '1'
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: 'PT15M'
 
-  # --> Lambda SnapShotter Configuration <-- #
+#   --> Lambda SnapShotter Configuration <-- #
   SnapShotterFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -223,6 +333,9 @@ Resources:
       SourceArn: !GetAtt SnapShotterEventsRule.Arn
 
 Outputs:
+  AssetsS3Bucket:
+    Value: !Ref AssetsS3Bucket
+
   GamingBoxPublicIp:
     Value: !GetAtt GamingBoxInstance.PublicIp
 

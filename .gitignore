@@ -3,10 +3,12 @@
 .custom.mk
 cfn/packaged.template
 
-src/snapshotter
+src
 !src/snapshotter/app.py
 !src/snapshotter/requirements.txt
-
+!src/uploader/uploader.py
+!src/uploader/requirements.txt
+!src/uploader/scripts
 
 ### VirtualEnv template
 # Virtualenv
@@ -17,7 +19,6 @@ src/snapshotter
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
 pyvenv.cfg
 .venv
 pip-selfcheck.json

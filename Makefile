@@ -39,6 +39,7 @@ deploy: build
 	  --region $(AWS_REGION) \
 	  --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
 	  --parameter-overrides \
+	  	GamingBoxInstanceType=$(GAMING_BOX_INSTANCE_TYPE) \
 	  	KeyPair=$(KEY_PAIR) \
 	  	OnPremIp=$(ON_PREM_IP)
 
@@ -67,5 +68,6 @@ clean:
 delete:
 	@printf "\n--> Deleting %s stack...\n" $(STACK_NAME)
 	@aws cloudformation delete-stack \
-            --stack-name $(STACK_NAME)
+            --stack-name $(STACK_NAME) \
+            --region $(AWS_REGION)
 	@printf "\n--> $(STACK_NAME) deletion has been submitted, check AWS CloudFormation Console for an update..."
