@@ -1,0 +1,6 @@
+AWS_REGION="AWS REGION TO DEPLOY STACK TO, e.g. eu-west-1"
+BUCKET_NAME="YOUR S3 BUCKET NAME, e.g. my-unique-bucket-name"
+STACK_NAME="YOUR STACK NAME, e.g. MyGameBox"
+GAMING_BOX_INSTANCE_TYPE="Instance type, e.g. g4dn.xlarge"
+KEY_PAIR="YOUR KEY PAIR NAME, e.g. my-key-pair-eu-west-1"
+ON_PREM_IP="YOUR HOME IP CIDR ADDRESS, e.g. 0.0.0.0/0"
