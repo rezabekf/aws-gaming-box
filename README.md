@@ -38,7 +38,7 @@ As the solution is using `Lambda` function, the code needs to be zipped and uplo
     chmod 400 ~/Downloads/${KEY_PAIR_NAME}.pem
     ```
 1. Create a `.custom.mk` file and populate it with your own values
-   ```
+   ```shell script
    cp .custom.mk.example .custom.mk
    ```
 
