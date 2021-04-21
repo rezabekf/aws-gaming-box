@@ -8,16 +8,18 @@ from botocore.exceptions import ClientError
 from crhelper import CfnResource
 
 logger = logging.getLogger(__name__)
-helper = CfnResource(json_logging=False, log_level='DEBUG', boto_level='CRITICAL', sleep_on_delete=120)
-s3 = boto3.client('s3')
-script_folder = './scripts/'
+helper = CfnResource(
+    json_logging=False, log_level="DEBUG", boto_level="CRITICAL", sleep_on_delete=120
+)
+s3 = boto3.client("s3")
+script_folder = "./scripts/"
 
 
 @helper.create
 def create(event, context):
     logger.info("Got Create")
-    properties = event.get('ResourceProperties', {})
-    bucket_name = properties.get('AssetsS3Bucket')
+    properties = event.get("ResourceProperties", {})
+    bucket_name = properties.get("AssetsS3Bucket")
 
     for file in _get_scripts(script_folder):
         _upload_file(script_folder + file, bucket_name, file)
@@ -33,8 +35,8 @@ def update(event, context):
 @helper.delete
 def delete(event, context):
     logger.info("Got Delete")
-    properties = event.get('ResourceProperties', {})
-    bucket_name = properties.get('AssetsS3Bucket')
+    properties = event.get("ResourceProperties", {})
+    bucket_name = properties.get("AssetsS3Bucket")
 
     for file in _get_scripts(script_folder):
         _delete_file(bucket_name, file)

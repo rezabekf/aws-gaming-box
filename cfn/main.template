@@ -1,13 +1,22 @@
-AWSTemplateFormatVersion: 2010-09-09
-Description: "AWS G4 Gaming Box NiceDcv server with Parsec"
-Transform: AWS::Serverless-2016-10-31
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: AWS G4 Gaming Box NiceDcv server with Parsec
+
 Metadata:
   Version: 0.0.1
 
 Parameters:
-  GamingBoxInstanceType:
+  CreateInstance:
+    Description: Should the solution create the gaming box instance? Only set to true if running the template for the first time!
     Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: true
+
+  GamingBoxInstanceType:
     Description: Gaming box instance type.
+    Type: String
     AllowedValues:
       - g4dn.xlarge
       - g4dn.2xlarge
@@ -22,66 +31,59 @@ Parameters:
     Default: 512
 
   KeyPair:
-    Type: AWS::EC2::KeyPair::KeyName
     Description: Keypair for the instance
+    Type: AWS::EC2::KeyPair::KeyName
 
   OnPremIp:
-    Type: String
     Description: CIDR block of an on-premise IP address
-    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Type: String
     Default: 0.0.0.0/0
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
 
   ResourceTags:
-    Type: String
     Description: Tag resources, which can help you identify and categorize them. For example project or application name e.g. MyAwesomeApp.
-    Default: 'GamingBox'
+    Type: String
+    Default: GamingBox
 
 Mappings:
   AMIRegionMap:
     eu-north-1:
       NICEDCV: ami-0229c06b2e8dde196
-
     ap-south-1:
       NICEDCV: ami-00c63aed4bb7051c1
-
     eu-west-3:
       NICEDCV: ami-08db56d7906c756f7
-
     eu-west-2:
       NICEDCV: ami-06052cc19d17248a5
-
     eu-west-1:
       NICEDCV: ami-0e53bea781f755cb9
-
     ap-northeast-2:
       NICEDCV: ami-0e6d692f39c0093a8
-
     ap-northeast-1:
       NICEDCV: ami-00fab56ff4b6a09a3
-
     ap-southeast-1:
       NICEDCV: ami-0b2b15806a49b8cbc
-
     ap-southeast-2:
       NICEDCV: ami-01557b04f1df6a3cb
-
     eu-central-1:
       NICEDCV: ami-02b7125842f81a87f
-
     us-east-1:
       NICEDCV: ami-04778e52247887e77
-
     us-east-2:
       NICEDCV: ami-08e4ec8ee36382d64
-
     us-west-1:
       NICEDCV: ami-0283d57a447aca855
-
     us-west-2:
       NICEDCV: ami-0243655613bd4e173
 
+Conditions:
+  IsCreateInstance: !Equals [!Ref CreateInstance, true]
+
+Transform: AWS::Serverless-2016-10-31
+
 Resources:
   # --> Assets Configuration <--#
+
   AssetsS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -103,13 +105,14 @@ Resources:
 
   LambdaTriggerUploadAssetsToS3:
     Type: Custom::LambdaTrigger
-    Version: '1.0'
     Properties:
       ServiceToken: !GetAtt LambdaUploadAssetsToS3.Arn
       AssetsS3Bucket: !Ref AssetsS3Bucket
       Build: 1.0
+    Version: "1.0"
 
   # --> GamingBox access configuration <-- #
+
   GamingBoxInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -134,7 +137,7 @@ Resources:
       Policies:
         - PolicyName: tag-instance
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -143,7 +146,7 @@ Resources:
                 Resource: '*'
         - PolicyName: nice-dcv-license
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -151,7 +154,7 @@ Resources:
                 Resource: !Sub 'arn:aws:s3:::dcv-license.${AWS::Region}/*'
         - PolicyName: ec2-windows-nvidia-drivers
           PolicyDocument:
-            Version: 2012-10-17
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -160,11 +163,11 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:ListBucket
-                Resource: 'arn:aws:s3:::ec2-windows-nvidia-drivers'
+                Resource: arn:aws:s3:::ec2-windows-nvidia-drivers
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                Resource: 'arn:aws:s3:::ec2-windows-nvidia-drivers/*'
+                Resource: arn:aws:s3:::ec2-windows-nvidia-drivers/*
 
   GamingBoxSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -215,10 +218,10 @@ Resources:
                 action=cfn-init.exe -v --stack ${AWS::StackId} --resource GamingBoxLaunchTemplate --region ${AWS::Region}
           commands:
             01-install-packages:
-              command: 'powershell.exe -ExecutionPolicy Unrestricted C:\cfn\scripts\install-packages.ps1 -Verbose'
+              command: powershell.exe -ExecutionPolicy Unrestricted C:\cfn\scripts\install-packages.ps1 -Verbose
               waitAfterCompletion: 0
             05-install-gpu-drivers:
-              command: 'powershell.exe -ExecutionPolicy Unrestricted C:\cfn\scripts\install-gpu-drivers.ps1 -Verbose'
+              command: powershell.exe -ExecutionPolicy Unrestricted C:\cfn\scripts\install-gpu-drivers.ps1 -Verbose
               waitAfterCompletion: 0
           services:
             windows:
@@ -226,8 +229,8 @@ Resources:
                 enabled: true
                 ensureRunning: true
                 files:
-                  - 'c:\\cfn\\cfn-hup.conf'
-                  - 'c:\\cfn\\hooks.d\\cfn-auto-reloader.conf'
+                  - c:\\cfn\\cfn-hup.conf
+                  - c:\\cfn\\hooks.d\\cfn-auto-reloader.conf
                 audiosrv:
                   enabled: true
                   ensureRunning: true
@@ -259,42 +262,44 @@ Resources:
               - Key: Name
                 Value: !Ref ResourceTags
               - Key: SnapAndDelete
-                Value: 'True'
+                Value: "True"
           - ResourceType: volume
             Tags:
               - Key: Name
                 Value: !Ref ResourceTags
               - Key: SnapAndDelete
-                Value: 'True'
-        UserData:
-          Fn::Base64: !Sub |
+                Value: "True"
+        UserData: !Base64
+          Fn::Sub: |
             <script>
             cfn-init.exe -v --stack ${AWS::StackName} --resource GamingBoxLaunchTemplate --region ${AWS::Region}
             cfn-signal.exe -e %errorlevel% --stack ${AWS::StackName} --resource GamingBoxInstance --region ${AWS::Region}
             </script>
 
   GamingBoxInstance:
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT15M
     Type: AWS::EC2::Instance
     Properties:
       LaunchTemplate:
         LaunchTemplateId: !Ref GamingBoxLaunchTemplate
-        Version: '1'
-    CreationPolicy:
-      ResourceSignal:
-        Count: 1
-        Timeout: 'PT15M'
+        Version: "1"
+    Condition: IsCreateInstance
 
-#   --> Lambda SnapShotter Configuration <-- #
+  #   --> Lambda SnapShotter Configuration <-- #
+
   SnapShotterFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      Description: "Create and delete snapshots"
+      Description: Create and delete snapshots
       CodeUri: ../src/snapshotter/
       Handler: app.lambda_handler
       Runtime: python3.7
       Timeout: 900
       Policies:
-        - Version: '2012-10-17'
+        - Version: "2012-10-17"
           Statement:
             - Effect: Allow
               Action:
@@ -302,15 +307,16 @@ Resources:
               Resource: '*'
       Environment:
         Variables:
-          GAMING_INSTANCE_NAME: !Sub ${AWS::StackName}
+          GAMING_INSTANCE_NAME: !Ref ResourceTags
           GAMING_INSTANCE_REGION: !Sub ${AWS::Region}
           GAMING_INSTANCE_SIZE_GB: !Ref GamingBoxVolumeSize
 
   # --> Events Rule to trigger Lambda on instance termination <-- #
+
   SnapShotterEventsRule:
     Type: AWS::Events::Rule
     Properties:
-      Description: "Events Rule to trigger Lambda on instance termination"
+      Description: Events Rule to trigger Lambda on instance termination
       EventPattern:
         source:
           - aws.ec2
@@ -338,10 +344,11 @@ Outputs:
 
   GamingBoxPublicIp:
     Value: !GetAtt GamingBoxInstance.PublicIp
+    Condition: IsCreateInstance
 
   GamingInstanceName:
     Description: GAMING_INSTANCE_NAME
-    Value: !Sub ${AWS::StackName}
+    Value: !Ref ResourceTags
 
   GamingBoxLaunchTemplate:
     Description: LAUNCH_TEMPLATE
